@@ -1,0 +1,9 @@
+references
+State abbreviation to name function:
+https://favorableoutcomes.wordpress.com/2014/10/28/updated-r-function-state-conversion-for-converting-state-codes-to-full-state-name/
+GGPlot Reference Page:
+http://ggplot2.tidyverse.org/reference/
+Stack Over Flow
+https://stackoverflow.com/
+StackExchnage
+https://stats.stackexchange.com/questions/31726/scatterplot-with-contour-heat-overlay

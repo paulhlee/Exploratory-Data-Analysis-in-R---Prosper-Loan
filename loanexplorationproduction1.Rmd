@@ -1,0 +1,712 @@
+---
+title: "Explore Prosper Loan Porfolio "
+author: Hao Lee
+output: 
+    md_document:
+    variant: markdown_github
+
+---
+
+Explore Prosper Loan Porfolio by Hao Lee
+========================================================
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(GGally)
+library(scales)
+library(memisc)
+library(gridExtra)
+library(RColorBrewer)
+library(maps)
+library(ggthemes)
+library(data.table)
+library(gridExtra)
+library(psych)
+setwd("C:/Users/paulh/Documents/Data Analyst/EDA/project")
+
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loans <-read.csv('prosperLoanData.csv')
+```
+
+#Data wrangling
+#####This data set is 128mb large, and is split into 3 files. Before starting, I will join all three files, and create a sample data set to test code with. 
+
+
+
+ 
+**Context**
+
+#####This data set is from Prosper loan. Prosper is a peer to peer lending company that offers personal loans at low rates. These loans are unsecured, which means borrowers do not have to put up any collateral. Each loan is funded by multiple peoplpe all over the US. Prosper loan has been in business since 2005.
+
+#####This data set contains 113,937 loans with 81 variables on each loan, including loan amount, interest rate, current loan status, borrower income, employment, stsatus, credit history, and latest payment.
+
+
+# Univariate Plots Section
+
+#####In this section, I am doing preliminary exploration of the Prosper loan dataset, and getting a sense of the distribution of the variable before going further. 
+
+```{r echo=FALSE, strloans}
+str(loans)
+```
+#####There are 113,937 observations, and 89 variables within this dataset. Most of the categorical varaibles appear to be factored. Within the variables, there are some wrangling to be done. Details are listed:
+
+
+#####To begin, I will split the CreationDate to "year", "date", "month" format for better processing later. Then, I noticed the "listingcategory..numeric" is listed by numbers, I will reassign them to their word categories.
+```{r, data wrangling}
+#split creation date to: year, date, and month
+loans<-separate(loans, ListingCreationDate, c("remove"), sep= " ")
+loans<-separate(loans, remove, c("year", "month", "day"),sep = "-")
+
+#categorize the listing category from numeric to words
+listing <- c("Not Available", "Debt Consolidation", "Home Imp", "Business", 
+             "Personal", "Student", "Auto", "Other", "Baby", "Boat", "Cosmetic",
+             "Engagement Ring", "Green", "Household Exp", "Large Purchases", 
+             "Medical", "Motorcycle", "RV", "Taxes", "Vacation", "Wedding")
+loans$listing_cat <- listing[c(loans$ListingCategory..numeric.+1)]
+```
+
+```{r, fixingincomerange}
+levels(loans$IncomeRange)
+```
+#####The order on IncomeRange does not seem to be in order! I will reorder the levels.
+```{r, fixingincomerange2}
+loans$IncomeRange<- factor(loans$IncomeRange, 
+                           levels(loans$IncomeRange)[c(7,8,1,2,4,5,6,3)])
+```
+
+#####Now putting, the loanOriginationQuarter in chronological order for better graphing later
+```{r, loanquarterinchrono}
+# Convert LoanOriginationQuarter to begin with the year using tidyr
+# This also makes sure that any plot axis will put it in increasing order of year
+loans$LoanOriginationQuarter <- as.character(loans$LoanOriginationQuarter)
+loans <- loans %>%
+         separate (col = LoanOriginationQuarter,
+                   into = c("Quarters", "Year"), sep = " ") %>%
+         unite(col = LoanOriginationQuarter, Year, Quarters, sep = " ")
+
+loans$LoanOriginationQuarterF <- factor(loans$LoanOriginationQuarter)
+```
+
+```{r, groupingloanstatus}
+#taking a look at loanStatus
+summary(loans$LoanStatus)
+```
+#####Way to many factors. The variables can be better categorized to "current or Completed", "Past Due", "Defaulted", The 6 different levels of past due makes for unncessary details
+```{r, groupingloan}
+loans$consol_status <- ifelse(loans$LoanStatus %like% "Past", "Past Due",
+                           ifelse(loans$LoanStatus == "Chargedoff", "Defaulted",
+                                  ifelse(loans$LoanStatus == "Defaulted", 
+                                         "Defaulted", "Current or Completed")))
+
+```
+```{r echo=FALSE, groupingloannotshowing}
+levels(loans$consol_status) <- c("Current or Completed", "Past Due", "Defaulted")
+
+loans$consol_agg<- ifelse(loans$consol_status == "Past Due", "Delinquent", 
+                          ifelse(loans$consol_status == "Defaulted", 
+                                 "Delinquent", "Current or Completed"))
+```
+
+###Summary statistics:
+```{r summary, echo=FALSE}
+summary(loans)
+```
+
+###Explore the Prosper loan portfolio history
+```{r loan_listing, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#distribution of loan by listing cateogry
+loans <- within(loans, listing_cat <- 
+                  factor(listing_cat, levels=names(sort(table(listing_cat), 
+                                                        decreasing=TRUE))))
+ggplot(aes(listing_cat), data = loans) + geom_bar(color = 'black',fill = 'dodgerblue4') + 
+  theme_solarized()+  
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) + scale_y_log10()
+```
+
+#####It appears the majority of the borrowers are taking the loan out for refinancing, which significantly dwarfes other category. The refiniancing category skews the other columns, so I transformed y-axis by log10
+
+### What about the status of the loans?
+###Do borrowers pay back their commitments?
+```{r loan_status, echo=FALSE,out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+#status of the loans?
+ggplot(aes(consol_status), data = loans) + 
+  geom_bar(color = 'black', fill = 'dodgerblue4') + facet_wrap(~Term) +
+  theme_solarized()+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Segmented by loan terms, the percentage of defaulted and past due loans in the 36 month categories look alarmingly high. Since this graph includes data from 2006 to 2014, I suspect the majority of the bad loans are from prior to 2009. It is worth investigating whether Proper is being more cautious in approving loans. 
+
+###How much money is lended out?
+```{r money_out, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#how much money is lended out? 
+ggplot(aes(LoanOriginalAmount), data = loans) + 
+  geom_histogram(binwidth = 500,color = 'black', fill = 'dodgerblue4') +
+  theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+```
+
+#####Most of the loans are below the 20,000 category, with the center of distirbution near the 5000 area. Because of the low borrowing amount, I will next investigate on the borrowing rate, and the credit-worthniess on the borrowers. 
+
+###Is it cheap to lend from my peers?
+```{r uni_rate, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#at what interst rate
+ggplot(aes(BorrowerRate), data = loans) +
+  geom_histogram(color = 'black', fill = 'dodgerblue4') +
+ theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+#what are the borrowers' credit rating?
+loans$credit_average <- (loans$CreditScoreRangeUpper+loans$CreditScoreRangeLower)/2
+
+ggplot(aes(credit_average), data =loans) +
+  geom_histogram(binwidth = 20, color = 'black', fill = 'dodgerblue4') +
+  xlim(400,800) + theme_solarized() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+summary(loans$credit_average)
+```
+
+#####The interest rate appears  quite low, however, the marjotiy of the borrowers have a credit score around 690 The IQR range is bounded at 60 points, meaning the majroity of Prosper's borrowers are credit worthy, and in return, they are borrowing at relatively cheap rates.We do have esome borrowers in the low credit range. 
+
+###Length of Employment?
+```{r employment_duration_A, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+
+ggplot(aes(loans$EmploymentStatusDuration), data = loans) + 
+   geom_histogram(binwidth = 30, color = 'black', fill = 'dodgerblue4') +
+   theme_solarized() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+  
+```
+
+#####This majority of the borrowers have less than 200 days of employment duration. With such high average credit score, I would have expected a higher mean for employment duration. Perhaps most of the borrowers are young and just joined the workforce.
+
+
+###Is prosper loan growing their loan porfolio?
+```{r prosper_years, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+#number of loans by years
+ggplot(aes(year), data = loans) + geom_bar(color = 'black', fill = 'dodgerblue4') +
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Loans have grown exponentially since the financial crisis! It is interesting to note lending almost disappeared in 2009. It appears loans have fallen in 2014. Reason being, there is  one quarter worth of data. 
+
+###But are they loaning out to credit-worth borrowers?
+
+```{r loan_qc, echo=FALSE, out.width='100%', out.height='25%',message=FALSE, warning=FALSE}
+p1<-ggplot(aes(CreditGrade), data = subset(loans, CreditGrade!="")) + 
+  geom_bar(color = 'black', fill = 'dodgerblue4') +facet_wrap(~year)+
+  theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+p2<-ggplot(aes(ProsperRating..Alpha.), data = subset(loans, ProsperRating..Alpha.!="")) +
+geom_bar(color = 'black', fill = 'dodgerblue4') +facet_wrap(~year) +
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+
+grid.arrange(p1,p2)
+summary(loans$ProsperRating..numeric.)
+```
+
+#####Looking at the Prosper's own rating, the mean rating stands at 4, which is C graded. We can also see prior to 2009, the distribution of loan quality appears to be uniform. That is bad, which may later explain the higher risk of default rate. We will look at that on the next graph. However, overtime, the distribution has become more uniform, with the mean loan having a quality of C
+
+
+###How about loan loss?
+```{r uni_loanloss, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#groos principal loss
+loan_loss<- loans%>%
+  group_by(LoanOriginationQuarter)%>%
+  summarise(defaultRate = sum(LP_GrossPrincipalLoss)/1000000)
+
+
+ggplot(aes(x=LoanOriginationQuarter, y=defaultRate, group=1), data = loan_loss) +
+ geom_bar(stat='identity', color = 'black', fill = 'dodgerblue4') +
+labs(y="LoanLoss ($M)")+theme_solarized() +
+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Time series chart confirm, that loan loss has fallen drastically since 2012. the peark from 2009 to 2012 is concerning. It appears, the management has reduced loan loss after 2012. We know it's not the case that membership is decreasing from previous plots. 
+
+###Looking at the customers
+```{r incomedist, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+#income distribution
+ggplot(loans, aes(x=IncomeRange, y = ..count../sum(..count..))) +
+ geom_bar(color = 'black', fill = 'dodgerblue4') +
+scale_x_discrete(labels = abbreviate)+labs(x="Income Range($K)") +
+ theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Most of the borrowers make around 25k to 50k, We do have 15% of population making 100K and up per year. A large portion of the borrowers have 0 reported income, or no information under this variable. 
+
+###Do they have the income to pay back?
+```{r occupation, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+
+#looking at occupation
+loans <- within(loans, Occupation 
+                <- factor(Occupation, levels=names(sort(table(Occupation), decreasing=TRUE))))
+
+top_occup <-names(sort(table(loans$Occupation), decreasing= T)[c(1:20)])
+
+ggplot(aes(IncomeRange), data = subset(loans, Occupation %in% top_occup)) +
+geom_bar(color = 'black', fill = 'dodgerblue4') +scale_x_discrete(labels = abbreviate) +
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+facet_wrap(~Occupation, scales = "free_y")
+
+```
+
+#####A look at averrage income range of the top 20 most common professions shows certain professions like computer programmer and executives are left skewed. Prosper may look into expanding customer acquisitons in attracting more customers in these professions. 
+
+
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+#####There are 113,937 obs in this data set with 85 variables.
+#####The avaialble resources allow me to investigate further on the loan quality, and credit history of each listing, and the demographic of the users in this database.
+
+### What is/are the main feature(s) of interest in your dataset?
+#####The main features are the demographics behind the loan. I am curious to find out the effects of income, credit history, employment status on borrower rate, and risk of default. The inituition is the more credit worthy a borrower is, the lower the probability of default.The higher their stated monthly income, the lower their borrower rate, and higher the quality of their loans. 
+
+### What other features in the dataset do you think will help support your anaylsis?
+#####The growth story behind Prosper loan. More demographic analysis in Prosper's customers. What sort of customers are they attracting? What types of loans are more likely to become delinquent. 
+
+### Did you create any new variables from existing variables in the dataset?
+#####Created an average credit score, which is the average of the upper and lower limit of the credit reproted, Perform several data wrangling tasks as described above. 
+
+
+### Of the features you investigated, were there any unusual distributions? 
+#####The majority of the borrowers fall within "good" credit score of 690 The distribution of loans tend to follow economic pattern, noticed a large dip in 2009, and subsequent rise after, which is in-line with the overall macro economic landscape. A big portion of the Prosper's portfolio consisted of C grade loans. However, the loan amount is small, less than $20,000. The loans may be bit risk, but the lenders are also not risking too much parinciapl, lowering the lending risk. 
+
+
+# Bivariate Plots Section
+
+
+###Looking at 20 most common Prosper borrower professions
+```{r b_top20table}
+#Analyze demographic data
+#let's look at credit score of twenty most common profession in Propser customer base
+top_twenty_occ<- top_occup[c(1:20)]
+loan_by_occ<- subset(loans, Occupation %in% top_twenty_occ)
+table(top_twenty_occ)
+```
+
+```{r b_top20, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+ggplot(aes(x=Occupation, y= credit_average), data = loan_by_occ) + geom_boxplot() +
+scale_x_discrete(labels = abbreviate)+ theme_solarized() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####The profession that have the riskiest credit score is listed as blank. The profession that has the longest tail in credit average is "othr". Prosper lending should be more cautious when borrowers do not specify their profession. Most professions appear to have credit average around 690. This means Prosper is selective in approving its borrowers. 
+
+```{r debtIncOccu, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#their debt/income ratio
+ggplot(aes(x=Occupation, y= DebtToIncomeRatio), data = loan_by_occ) +
+  geom_boxplot()+scale_x_discrete(labels = abbreviate) +theme_solarized()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+```
+
+#####The debt to income graph paints a better story in quantifying credit risk. Borroweers with profession listed as "othr, and blank, have the longest tail in Debt to income ratio. Other professions  with high debt-to-income tailis are clerks, and teachers. A high D/I ratio may means difficiulty in making loan commitments. .
+
+
+###Employment status on credit scores
+```{r b_employmentstat, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+
+#by employment status
+ggplot(aes(x=EmploymentStatus, y= credit_average), data = loans) + geom_boxplot() +
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####If credit_average is a good measasure on loan quality, people with employment status listed as blank or NA have much lower than average credit scores. SUrprisingly people who are not employed have slightly higher than average credit scores than Part time workers
+
+###Does higher income translate to higher credit score?
+```{r b_income_onCred, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+
+#stated income range vs credit score
+ggplot(aes(credit_average), data = loans) + geom_density() +xlim(c(350,800)) +
+facet_wrap(~IncomeRange) +scale_fill_brewer("Blues") +scale_color_brewer("Blues") + 
+  theme_solarized() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####The distribution does tend to move right as yearly income goes up! Though for people in 75k+ category, the distribution is tighter, the center of distribution for all the classes expect for "Not display" tends to hover around 680~
+
+
+###Can working longer lower your borrowing rate?
+```{r b_lengthemp, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+#length of employment
+loans$EmploymentStatusDuration.bucket<- 
+  cut(loans$EmploymentStatusDuration, c(90,180,270,360,450,540,630,720))
+ggplot(aes(y=BorrowerRate,x = loans$EmploymentStatusDuration.bucket), data = loans) +
+geom_boxplot() + theme_solarized() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####The most striking change in borrowing rate happens when people have length of emplyoment more than 360 days. The borrwing rate becomes the tighest, and the tails are the shortest, suggesting people who stay at one job longer can expect more certain borrowing rate at a low rate.
+
+#####Looking at the summary statistic below, the 630+ employmentdays class have the lowest standard deviation, IQR range, and the lowest Max as well. This confirm my earlier observation.
+```{r}
+tapply(loans$BorrowerRate, loans$EmploymentStatusDuration.bucket, describe)
+
+```
+
+
+
+###What about the lenders, what makes money for them??
+```{r b_lendermoney, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#what credit rating makes the most moeny for lenders? only considering prosper rating
+
+ggplot(aes(x = ProsperRating..Alpha., y= LenderYield), 
+       data = subset(loans, ProsperRating..Alpha.!= "")) + geom_boxplot() +
+  theme_solarized() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+#how about on estimated return
+ggplot(aes(x=BorrowerRate, y = EstimatedReturn), data = loans) + geom_point() +
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####The boowerRate graph vs estimated return graph has some very distinct stripe, will investigate this more in the multivariate section!
+
+#####With HR having a rating of 1, the correlation test tells that the riskier the loan the higher the lender yield. The stripes on the earlier graph suggest this may not be the only side of the story. 
+```{r}
+cor.test(loans$ProsperRating..numeric., loans$LenderYield)
+```
+
+```{r lender_adding_color, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+
+ggplot(aes(x=BorrowerRate, y = EstimatedReturn), data = loans) + 
+  geom_point(aes(color = loans$ProsperRating..Alpha.)) +theme_solarized() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Taking the previous graph and coloring by the prosper loan rating, we get a better sense on the riskieness of loans. Given a borrowing rate, the lower the rating, the lower the expected return on the loan. The graph is a bit counter-intuitive, as I would expect a much higher yield, or estimated return for riskier loans. 
+
+
+###How is Prosper Loan performing as a company?
+```{r default_freq_b, echo=FALSE, out.width='100%',out.height='18%', message=FALSE, warning=FALSE}
+#defaulted, or write off loans
+loan_defaults <- subset(loans, LoanStatus == "Chargedoff" | LoanStatus == "Defaulted")
+
+default_rate<-table(loan_defaults$LoanOriginationQuarter)/ 
+  table(loans$LoanOriginationQuarter)[c(2:32)] *100
+default_rate.df <-as.data.frame(default_rate)
+
+ggplot(default_rate.df, aes(Var1, Freq, group =1))+
+  geom_line(color = 'dodgerblue4', size =2 ) +geom_smooth(method = "lm", size =2) + 
+  geom_point() + theme_solarized() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+#####Default rate has gone down from a high of 40% to below 1%. Well done Propser. The loan default rate is unbelivably high prior to 2011. Why?
+```{r}
+table(loans$year)
+```
+
+#####One possible reason the default rate is sky high in 2006 is Prosper loan has just begin operating, and may not have the proper risk measures in place. 
+
+#What is the default risk for each grade of loan?
+```{r loan_status r, echo=FALSE, out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+#breakdown of loans by status
+loans$ProsperRating..Alpha.<- 
+  factor(loans$ProsperRating..Alpha., 
+         levels(loans$ProsperRating..Alpha.)[c(1,3,2,4,5,6,7,8)])
+ggplot() + geom_bar(aes(y=LoanOriginalAmount/(1e+06), x = ProsperRating..Alpha., 
+               fill = consol_status), data = loans, stat = 'identity')+
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+labs(y="Loan Balance ($M)")
+
+```
+
+#####Looking at the plot, D, E, and HR grade loans have much higher chance of defaults. Tying this picture back tot the yield rate, Prosper loan faces relatively low risk with grade C and B loans, and can make much higher yield than the higher grade loans.
+
+
+```{r number_investorsr, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE}
+#lastly number of investors funding
+loan_investors<-loans%>%
+  group_by(LoanOriginationQuarter)%>%
+  summarise(total_invest= sum(Investors)/1000)
+ggplot(loan_investors, aes(LoanOriginationQuarter, total_invest, group = 1)) +
+geom_line(color = 'dodgerblue4', size =2 )+ theme_dark() +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+geom_smooth(method = "lm", size =2)+geom_point() +labs(y="total investors (k)")+
+theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+
+#Pearson correlation matrix
+#ggcorr(loans, label = TRUE, label_size = 3,
+      #hjust = 0.8, size = 2.5, color = "black", layout.exp = 2)
+
+```
+
+#####Investors getting hyped about Propser Loans, with steady growth after the financial crisis.Recently, Prosper has ecountered a setback in investor growth. Zooming back, Propser is doing well in growing its membership base. 
+
+
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the 
+#####Prosper loan is making strides in growing its investor base and decreasing its risk of default. Default rate has fallen from a high of 40% to a miniscule amount. At the same time, more people are signing up to lend money!
+#####As for Proper's borrowers, the majority of the customers have decent credit score. From the analysis, I also learned that working in the same job longer will tend do reduce one's borrowing rate. 
+
+### Did you observe any interesting relationships between the other features 
+#####The most interesting relationship I observed is taht of borrowRate and estimated return. Before color the graph by loan rating, there are distinct stripes on the graph, suggesting potential classes of relationships. By illuminating with loan ratings, the chart tells quite a comprehensive story on risk and return. Though a riskier loan may generate higher yield, because of the higher probabiliy of default, the expected return is actually lower!
+
+
+
+# Multivariate Plots Section
+
+> **Tip**: Now it's time to put everything together. Based on what you found in
+the bivariate plots section, create a few multivariate plots to investigate
+more complex interactions between variables. Make sure that the plots that you
+create here are justified by the plots you explored in the previous section. If
+you plan on creating any mathematical models, this is the section where you
+will do that.
+
+#Which loan cateogry has the highest risk?
+```{r heap_map, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE}
+loan_catuse<-loans%>%
+  group_by(listing_cat, ProsperRating..Alpha.)%>%
+  summarise(loan_loss_rate= sum(LP_GrossPrincipalLoss)/sum(LoanOriginalAmount))
+
+ggplot(loan_catuse, aes(ProsperRating..Alpha., listing_cat)) + 
+  geom_tile(aes(fill = loan_loss_rate),color = "white")+
+  scale_fill_gradient(low = "grey95", high = "steelblue")+theme_solarized()
+
+```
+
+#####In the previous section, we examined the relationship between occupation, and credit risk. This heat map looks at the loan default risk against different listing category. From the gradient of the map, we can see that for all listing categories, the loans with the lowest credit rating have the highest loan loss rate. Certain categories havev much higher loan loss rate than others, these information can be used to mitigate risk in loan selection. 
+
+#Are higher grade loans necessarily safer?
+```{r borrowrate_loanloss, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE}
+
+ggplot(aes(x=BorrowerRate, y=LP_GrossPrincipalLoss), 
+       data = subset(loans, ProsperRating..Alpha.!= "")) + 
+  geom_point(aes(color=ProsperRating..Alpha.), alpha = 1/2, position = "jitter") +
+  scale_alpha(range = c(0,1))+scale_fill_brewer() +scale_color_brewer() +
+  theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+##### I would have expected that higher grade loans would have lower principal losses, but the graph suggested otherwise. Looking at the graph, almost all the principal loss of over 15K are from the high grade loans. This chart suggests there are certainly more varaibles that determine the risk of default than the Rating of the loans. Loans with lower rating also have surprisingly smaller gross principal loss. One possible explation is less money was extended out to the lower grade loans. 
+
+```{r}
+cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+```
+##### The correlatiion test on Prosper Rating on the loans that are defaulted revealed a gloomy relationship between the amount lost and the quality rating of the loans. 
+
+
+#Riskiness by the duration of the loan?
+```{r debt_income, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE}
+#debt to income on default rate
+ggplot(aes(x=BorrowerRate, y=DebtToIncomeRatio), data = loans) +
+  geom_point(aes(color = consol_status), alpha = 0.3) +facet_wrap(~Term, ncol =1) +
+ coord_flip()
+```
+
+##### The most striking feature of this chart is that loans of 12 month duration have very few defaults and delinquencies. Loans that have the highest defaults are the 36 month duration ones. In the 36 month graph, the riskiness of debt to income and possiblity of default is clearer, with far more green points moving past 1.25 debt to income line. 
+
+#The longer one stay in a job, the more credit worthy that person is.
+```{r job_security, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE}
+ggplot() + geom_point(data = loans, aes(x= EmploymentStatusDuration,
+          y= credit_average, color = consol_agg), position = "jitter", alpha = 1/10) +
+  geom_density2d(data = subset(loans, loans$consol_status!= "Current or Completed"), 
+         aes(x=EmploymentStatusDuration, y = credit_average, color = consol_agg)) +
+  scale_fill_brewer(type = "qual", palette =3, direction =-1) +
+  scale_color_brewer(type = "qual", palette = 3, direction =-1) +
+  theme_solarized() + ylim(400,800)
+```
+
+##### In this chart, the denser the white counturs, the more delinquent lonas there are. Based on this observation, most of the delinqueunt loans are from people who have less than 200 days of EmploymentDuration. The strength of the emplyoment duration variable is even stronger than that of credit score. While people with high credit score still default on their loans, I notice almost no delinquencies for people with more than 200 days in their current job. 
+
+
+#Where are the borrowers from?
+```{r states, echo=FALSE, out.width='100%',out.height='100%',message=FALSE, warning=FALSE}
+
+  
+  
+#Function to convert state FIPS codes to full state names or vice-versa [as factor levels for downstream grouping]:
+#x is a vector of state abbreviations, or full state names.
+#direction (name to code, or code to name) is determined automatically based on the supplied data
+#depending on ultimate use of the returned set, users may wish to retain factor levels for all states (default) or only those states for which data was passed to the function. factor levels (faclevs) should be indicated ('all' or 'selected') so as to return the desired state factors for downstream use (default is to supply factor levels only for those states supplied in the dataset).
+ 
+stateConversion <- function(x, faclevs = 'selected') {
+st.codes <- data.frame(state = as.factor(c("AK", "AL", "AR", "AZ", "CA", "CO", 
+                                           "CT", "DC", "DE", "FL", "GA", "HI",
+                                            "IA", "ID", "IL", "IN", "KS", "KY",
+                                           "LA", "MA", "MD", "ME", "MI", "MN",
+                                            "MO", "MS",  "MT", "NC", "ND", "NE",
+                                           "NH", "NJ", "NM", "NV", "NY", "OH",
+                                            "OK", "OR", "PA", "PR", "RI", "SC",
+                                           "SD", "TN", "TX", "UT", "VA", "VT",
+                                            "WA", "WI", "WV", "WY")),
+          full = as.factor(c("Alaska","Alabama" ,  "Arkansas",
+                             "Arizona","California" , "Colorado" ,
+                             "Connecticut", "District of Columbia",
+                             "Delaware" ,  "Florida" , "Georgia" ,
+                             "Hawaii","Iowa" ,"Idaho" , "Illinois",
+                             "Indiana" ,  "Kansas" , "Kentucky" , "Louisiana" , 
+                             "Massachusetts", "Maryland" ,"Maine" ,
+                            "Michigan" , "Minnesota" , "Missouri" ,"Mississippi",
+                            "Montana" , "North Carolina","North Dakota", "Nebraska",
+                            "New Hampshire" , "New Jersey" ,  "New Mexico", 
+                            "Nevada" ,"New York" , "Ohio" , "Oklahoma" 
+                            ,"Oregon" , "Pennsylvania" , "Puerto Rico", "Rhode Island",
+                            "South Carolina", "South Dakota" , "Tennessee",
+                            "Texas" , "Utah" ,  "Virginia","Vermont","Washington",
+                            "Wisconsin", "West Virginia" , "Wyoming"))
+    )
+ 
+    if (nchar(x[1]) == 2) { st.x <- data.frame(state = x); 
+    refac.x <- st.codes$full[match(tolower(st.x$state), tolower(st.codes$state))] }
+    else { st.x <- data.frame(full = x); 
+    refac.x <- st.codes$state[match(tolower(st.x$full), tolower(st.codes$full))] }
+ 
+    if(faclevs == 'all') {return(refac.x)}
+    else {return(factor(refac.x))}
+ 
+}
+
+
+
+#where are the borrowers from?
+states <- data.frame(state.center, state.abb)
+states_map<-map_data("state")
+
+state_bor <- loans%>%
+  group_by(BorrowerState)%>%
+  summarise(population = n())
+
+state_bor<-subset(state_bor, BorrowerState!= "")
+state_bor<- subset(state_bor, !(BorrowerState %in% c("DC", "AK", "HI")))
+
+borrowerState <- as.character(state_bor$ BorrowerState)
+update_state <- stateConversion(borrowerState, faclevs = 'selected')
+state_bor$updateState <- tolower(update_state)
+
+
+states_map <- map_data("state")
+ggplot(state_bor, aes(map_id = state_bor$updateState)) +
+geom_map(aes(fill = population), map = states_map, color = "white") +
+expand_limits(x = states_map$long, y = states_map$lat) +
+  scale_fill_gradient(low = "grey95", high = "blue3", trans = "log10")+
+  geom_text(data = subset(states, !(state.abb %in% c("AK", "HI"))), 
+            aes(x,y, label = state.abb))
+
+
+```
+
+##### Finishing off my exploration, I would like to see where Prosper Loan has the strongest customer base. This chart can be used to identify potential growth area within the US for new user acquistion. Currently, the majority of the Prosper loan customers are from California, followed by Texas, New York. The chart suggests a gap in membership in the mid-western states, with almost no-one in North Dakota! True, the population of North Dakota is pretty small, but more work can be done in states like Washington or Colorado where there are high population of technologicaly savy people. 
+```{r}
+sort(table(loans$BorrowerState), decreasing = TRUE)
+```
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the 
+##### One of the strongest variable for default risk is length of employment duration. Loan rating and credit score often give mixed signals when it comes to the probabiltiy of default. However, the longer someone stays at a job, the safer the loan is, with people who have an employment duration of over a year having almost 0 delinquent loans. The term of the loans also factor strongly into chance of default. The data points to loans of the shortest term being the safest. Though the yield is bit lower on these shorter term loans, the possibility of default is quite low as well. 
+
+
+### Were there any interesting or surprising interactions between features?
+##### I would have expected a stronger relationship between default risk against borrower rate, credit score,  loan rating, and income. But alone, these variable don't seem to paint the complete story on the risk level of a loan. 
+
+
+------
+
+# Final Plots and Summary
+
+
+
+### Plot One
+```{r Plot_one, echo=FALSE, out.width='100%',out.height='18%',message=FALSE, warning=FALSE }
+loan_catuse<-loans%>%
+  group_by(listing_cat, ProsperRating..Alpha.)%>%
+  summarise(loan_loss_rate= sum(LP_GrossPrincipalLoss)/sum(LoanOriginalAmount))
+
+ggplot(loan_catuse, aes(ProsperRating..Alpha., listing_cat))+
+  geom_tile(aes(fill = loan_loss_rate),color = "white") +
+  scale_fill_gradient("Default Rate",low = "grey95", high = "steelblue")+
+  labs(y="Listing Category", x= "Prosper Rating", 
+      title = "Loan Risk Across Listing Category against Prosper Rating")+theme_solarized() 
+```
+
+### Description One
+##### As the broker between investors and borrowers, Propser Loan serves to mediate the exchange of funds and reduce the risk of loan defaults. From the analysis, variables other than yearly income and credit scores are needed to protect investors from default risk. This heat map offers a guide into which cateogory of loans are the riskiest within each Prosper Rating. Certain investors may want to take on more risks when lending, in seeking for higher return, while maximizing their risk to reward ratio. This map shows that while all loans rated "HR" are the riskiest, certain categories within them have relatively lower risks. People who take out High Risk loans for "Baby" are 3 times as likely to default than for "Engagement Ring". Further analysis into the sample sizes need to confirm this observation. Nevertheless, this proides a starting point into maxmizing an investors risk/ reward trade off. 
+
+#####Across the map, we can see the risk of the loan increases across the different Prosper Rating. This is as expected, and also means Prosper's own internal rating system is reliable. I am surprised to note that the degree of change across the rating system for each category is much disimilar. The rate for motorcylce purchase is much smaller than the rate for business loan. Quite un-intuitive. Again, further data exploration is needed to explore the riskiness of loans across each category. 
+
+### Plot Two
+```{r Plot_Two, echo=FALSE,out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+ggplot(aes(x=BorrowerRate, y=LP_GrossPrincipalLoss), 
+       data = subset(loans, ProsperRating..Alpha.!= "")) +
+  geom_point( aes(color=ProsperRating..Alpha.), alpha = 1/2, position = "jitter") +
+  scale_alpha(range = c(0,1))+scale_fill_brewer() +scale_color_brewer()  + 
+  theme_solarized()+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(title= "Loan Loss at Borrower Rate", x="Borrower Rate", y= "Gross Principal Loss($)")
+```
+
+### Description Two
+#####This graph suggests there are more variables that predict the probability of default than Borrower Rate, and credit rating. Surprisingly, for the loans that have defaulted, the higher the prosper rating, the more principal lost. Pearson's correlation test on loans defaulted, and loan quality rating suggests if the loan were to default, the higher the rating, the higher the expected loss. 
+```{r}
+cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+```
+#####The result goes against intuition. One possible reason is higher credit lines were extended to "credit-worthy" borrowers, which explains the higher gross principal loss. On the other hand, for the more risky borrowers, less credit lines were extended, thus the expected loss were less when they do default. Strategically, Prosper loans need to improve their rating system to decrease the loan default rates. Ideally, one would want to see 0 principal loss, or decrease the average gross principal loss for their more "creidit-worthy" borrowers.
+
+
+### Plot Three
+```{r Plot_three, echo=FALSE,out.width='100%', out.height='18%',message=FALSE, warning=FALSE}
+ggplot() + geom_point(data = loans, 
+             aes(x= EmploymentStatusDuration, y= credit_average, color = consol_agg), 
+             position = "jitter", alpha = 1/10) +
+  geom_density2d(data = subset(loans, loans$consol_status!= "Current or Completed"), 
+                 aes(x=EmploymentStatusDuration, y = credit_average, color = consol_agg))+
+  scale_fill_brewer(type = "qual", palette =3, direction =-1) +
+  scale_color_brewer(type = "qual", palette = 3, direction =-1) +
+  theme_solarized() + ylim(500,800) +
+  labs(y= "Credit Score", x= "Employment Duration (days)",
+       title ="Employment Duration, Credit Score on Risk of Default", 
+       color = "Loan Status" )
+```
+
+### Description Three
+##### One would have guessed that credit score is the best predictor in default risk. This third plot suggests otherwise. At less than 50 days of employment for the loans that have been defaulted, a person with 730 credit score could just as easily default on her loan as someone with 650 credit score. The density contours remains the most dense at the low employment duration interval, and spreads out as the the employment duration increases. At 360 days, we see almost no delinquent loans. This chart suggests taht employment duration can be one of the strongest predictor in default risk, with the risk goes down as employment days goes up.  
+```{r }
+loan_good <- subset(loans, loans$consol_agg == "Current or Completed")
+t.test(loan_good$EmploymentStatusDuration, 
+       loan_defaults$EmploymentStatusDuration, var.equal = TRUE, paired = FALSE)
+```
+#####Running a two tailed t-test for Employment Duaration on loans that have defaulted, and loans that stand good, I obtained a p-value of less than 2.2e-16, which points out the two means are significantly different. The mean of the two sample are also quite different, which the means of non-defaulted loans at 98, and defaulted loans at 80. By discovering this relationship, Prosper Loan should place more reliance on a person's Employment Duration on the quality of a loan. Other factors like Credit Score, Stated Income, should still be included, but weighting must be adjust to hone the accuracy of their Rating system. 
+
+
+
+------
+
+# Reflection
+
+
+#####This project was quite a beast! I began this project loathing R, thinking how much easier it would have been if I could performm the same visualization in Python. Many of the data wrangling tasks were in R were foreign to me, and I found myself struggling with th R syntax to slice and dice things right. Luckily, there is a wealth of resources avaialble online about R, and especially thanks to stackoverflow, rstudio, and the thousands of R bloggers, I am able to complete this project. As I progress through the project, I gain an appreciation on the agility of R in plotting some visually stunning plots, so much better than MS Excel! 
+
+#####Besides struggling on learning R, I found myself putting my business hat on. This dataset is huge with 85 variables, and there are so many routes to explore, but only so few yielded meaningful analysis. The struggle began with asking the right questions. Without the right questions, the plots would just be meaningless display of one variable plotted against another. Other than thinking in a big picture way, I relied on Pearson's correlation matrix to help me visuzlize relationship between one variable and another, and plotting and one variables with another to find relationship that tells a story.
+
+#####Based on this data exploration, I have found several variables of interest, EmploymentDuration, DebttoIncome, Listing Category, BorrowerRate, and credit score on the possiblity of default. For future work, I would like to conduct regression analysis on these variables on the possibility of default, and maybe come up with my own rating system in loan quality to help Prosper loan to better maximize their risk reward trade off. Through my detail analysis on Prosper loan's porfoiio, I belive the company is heading in the right path, with drastically lower default rate, increase subscriber growth, perhaps they have already developed their magic model in reducing default risk. 
+
+
+
+
