@@ -1,3 +1,77 @@
+Explore Prosper Loan Porfolio
+================
+Hao Lee
+
+-   [Explore Prosper Loan Porfolio by Hao Lee](#explore-prosper-loan-porfolio-by-hao-lee)
+-   [Data wrangling](#data-wrangling)
+    -   [This data set is 128mb large, and is split into 3 files. Before starting, I will join all three files, and create a sample data set to test code with.](#this-data-set-is-128mb-large-and-is-split-into-3-files.-before-starting-i-will-join-all-three-files-and-create-a-sample-data-set-to-test-code-with.)
+    -   [This data set is from Prosper loan. Prosper is a peer to peer lending company that offers personal loans at low rates. These loans are unsecured, which means borrowers do not have to put up any collateral. Each loan is funded by multiple peoplpe all over the US. Prosper loan has been in business since 2005.](#this-data-set-is-from-prosper-loan.-prosper-is-a-peer-to-peer-lending-company-that-offers-personal-loans-at-low-rates.-these-loans-are-unsecured-which-means-borrowers-do-not-have-to-put-up-any-collateral.-each-loan-is-funded-by-multiple-peoplpe-all-over-the-us.-prosper-loan-has-been-in-business-since-2005.)
+    -   [This data set contains 113,937 loans with 81 variables on each loan, including loan amount, interest rate, current loan status, borrower income, employment, stsatus, credit history, and latest payment.](#this-data-set-contains-113937-loans-with-81-variables-on-each-loan-including-loan-amount-interest-rate-current-loan-status-borrower-income-employment-stsatus-credit-history-and-latest-payment.)
+-   [Univariate Plots Section](#univariate-plots-section)
+    -   [In this section, I am doing preliminary exploration of the Prosper loan dataset, and getting a sense of the distribution of the variable before going further.](#in-this-section-i-am-doing-preliminary-exploration-of-the-prosper-loan-dataset-and-getting-a-sense-of-the-distribution-of-the-variable-before-going-further.)
+    -   [There are 113,937 observations, and 89 variables within this dataset. Most of the categorical varaibles appear to be factored. Within the variables, there are some wrangling to be done. Details are listed:](#there-are-113937-observations-and-89-variables-within-this-dataset.-most-of-the-categorical-varaibles-appear-to-be-factored.-within-the-variables-there-are-some-wrangling-to-be-done.-details-are-listed)
+    -   [To begin, I will split the CreationDate to "year", "date", "month" format for better processing later. Then, I noticed the "listingcategory..numeric" is listed by numbers, I will reassign them to their word categories.](#to-begin-i-will-split-the-creationdate-to-year-date-month-format-for-better-processing-later.-then-i-noticed-the-listingcategory..numeric-is-listed-by-numbers-i-will-reassign-them-to-their-word-categories.)
+    -   [The order on IncomeRange does not seem to be in order! I will reorder the levels.](#the-order-on-incomerange-does-not-seem-to-be-in-order-i-will-reorder-the-levels.)
+    -   [Now putting, the loanOriginationQuarter in chronological order for better graphing later](#now-putting-the-loanoriginationquarter-in-chronological-order-for-better-graphing-later)
+    -   [Way to many factors. The variables can be better categorized to "current or Completed", "Past Due", "Defaulted", The 6 different levels of past due makes for unncessary details](#way-to-many-factors.-the-variables-can-be-better-categorized-to-current-or-completed-past-due-defaulted-the-6-different-levels-of-past-due-makes-for-unncessary-details)
+    -   [Summary statistics:](#summary-statistics)
+    -   [Explore the Prosper loan portfolio history](#explore-the-prosper-loan-portfolio-history)
+    -   [What about the status of the loans?](#what-about-the-status-of-the-loans)
+    -   [Do borrowers pay back their commitments?](#do-borrowers-pay-back-their-commitments)
+    -   [How much money is lended out?](#how-much-money-is-lended-out)
+    -   [Is it cheap to lend from my peers?](#is-it-cheap-to-lend-from-my-peers)
+    -   [Length of Employment?](#length-of-employment)
+    -   [Is prosper loan growing their loan porfolio?](#is-prosper-loan-growing-their-loan-porfolio)
+    -   [But are they loaning out to credit-worth borrowers?](#but-are-they-loaning-out-to-credit-worth-borrowers)
+    -   [How about loan loss?](#how-about-loan-loss)
+    -   [Looking at the customers](#looking-at-the-customers)
+    -   [Do they have the income to pay back?](#do-they-have-the-income-to-pay-back)
+-   [Univariate Analysis](#univariate-analysis)
+    -   [What is the structure of your dataset?](#what-is-the-structure-of-your-dataset)
+    -   [What is/are the main feature(s) of interest in your dataset?](#what-isare-the-main-features-of-interest-in-your-dataset)
+    -   [What other features in the dataset do you think will help support your anaylsis?](#what-other-features-in-the-dataset-do-you-think-will-help-support-your-anaylsis)
+    -   [Did you create any new variables from existing variables in the dataset?](#did-you-create-any-new-variables-from-existing-variables-in-the-dataset)
+    -   [Of the features you investigated, were there any unusual distributions?](#of-the-features-you-investigated-were-there-any-unusual-distributions)
+-   [Bivariate Plots Section](#bivariate-plots-section)
+    -   [Looking at 20 most common Prosper borrower professions](#looking-at-20-most-common-prosper-borrower-professions)
+    -   [Employment status on credit scores](#employment-status-on-credit-scores)
+    -   [Does higher income translate to higher credit score?](#does-higher-income-translate-to-higher-credit-score)
+    -   [Can working longer lower your borrowing rate?](#can-working-longer-lower-your-borrowing-rate)
+    -   [What about the lenders, what makes money for them??](#what-about-the-lenders-what-makes-money-for-them)
+    -   [How is Prosper Loan performing as a company?](#how-is-prosper-loan-performing-as-a-company)
+-   [What is the default risk for each grade of loan?](#what-is-the-default-risk-for-each-grade-of-loan)
+    -   [Looking at the plot, D, E, and HR grade loans have much higher chance of defaults. Tying this picture back tot the yield rate, Prosper loan faces relatively low risk with grade C and B loans, and can make much higher yield than the higher grade loans.](#looking-at-the-plot-d-e-and-hr-grade-loans-have-much-higher-chance-of-defaults.-tying-this-picture-back-tot-the-yield-rate-prosper-loan-faces-relatively-low-risk-with-grade-c-and-b-loans-and-can-make-much-higher-yield-than-the-higher-grade-loans.)
+    -   [Investors getting hyped about Propser Loans, with steady growth after the financial crisis.Recently, Prosper has ecountered a setback in investor growth. Zooming back, Propser is doing well in growing its membership base.](#investors-getting-hyped-about-propser-loans-with-steady-growth-after-the-financial-crisis.recently-prosper-has-ecountered-a-setback-in-investor-growth.-zooming-back-propser-is-doing-well-in-growing-its-membership-base.)
+-   [Bivariate Analysis](#bivariate-analysis)
+    -   [Talk about some of the relationships you observed in this part of the](#talk-about-some-of-the-relationships-you-observed-in-this-part-of-the)
+    -   [Did you observe any interesting relationships between the other features](#did-you-observe-any-interesting-relationships-between-the-other-features)
+-   [Multivariate Plots Section](#multivariate-plots-section)
+-   [Which loan cateogry has the highest risk?](#which-loan-cateogry-has-the-highest-risk)
+    -   [In the previous section, we examined the relationship between occupation, and credit risk. This heat map looks at the loan default risk against different listing category. From the gradient of the map, we can see that for all listing categories, the loans with the lowest credit rating have the highest loan loss rate. Certain categories havev much higher loan loss rate than others, these information can be used to mitigate risk in loan selection.](#in-the-previous-section-we-examined-the-relationship-between-occupation-and-credit-risk.-this-heat-map-looks-at-the-loan-default-risk-against-different-listing-category.-from-the-gradient-of-the-map-we-can-see-that-for-all-listing-categories-the-loans-with-the-lowest-credit-rating-have-the-highest-loan-loss-rate.-certain-categories-havev-much-higher-loan-loss-rate-than-others-these-information-can-be-used-to-mitigate-risk-in-loan-selection.)
+-   [Are higher grade loans necessarily safer?](#are-higher-grade-loans-necessarily-safer)
+    -   [I would have expected that higher grade loans would have lower principal losses, but the graph suggested otherwise. Looking at the graph, almost all the principal loss of over 15K are from the high grade loans. This chart suggests there are certainly more varaibles that determine the risk of default than the Rating of the loans. Loans with lower rating also have surprisingly smaller gross principal loss. One possible explation is less money was extended out to the lower grade loans.](#i-would-have-expected-that-higher-grade-loans-would-have-lower-principal-losses-but-the-graph-suggested-otherwise.-looking-at-the-graph-almost-all-the-principal-loss-of-over-15k-are-from-the-high-grade-loans.-this-chart-suggests-there-are-certainly-more-varaibles-that-determine-the-risk-of-default-than-the-rating-of-the-loans.-loans-with-lower-rating-also-have-surprisingly-smaller-gross-principal-loss.-one-possible-explation-is-less-money-was-extended-out-to-the-lower-grade-loans.)
+    -   [The correlatiion test on Prosper Rating on the loans that are defaulted revealed a gloomy relationship between the amount lost and the quality rating of the loans.](#the-correlatiion-test-on-prosper-rating-on-the-loans-that-are-defaulted-revealed-a-gloomy-relationship-between-the-amount-lost-and-the-quality-rating-of-the-loans.)
+-   [Riskiness by the duration of the loan?](#riskiness-by-the-duration-of-the-loan)
+    -   [The most striking feature of this chart is that loans of 12 month duration have very few defaults and delinquencies. Loans that have the highest defaults are the 36 month duration ones. In the 36 month graph, the riskiness of debt to income and possiblity of default is clearer, with far more green points moving past 1.25 debt to income line.](#the-most-striking-feature-of-this-chart-is-that-loans-of-12-month-duration-have-very-few-defaults-and-delinquencies.-loans-that-have-the-highest-defaults-are-the-36-month-duration-ones.-in-the-36-month-graph-the-riskiness-of-debt-to-income-and-possiblity-of-default-is-clearer-with-far-more-green-points-moving-past-1.25-debt-to-income-line.)
+-   [The longer one stay in a job, the more credit worthy that person is.](#the-longer-one-stay-in-a-job-the-more-credit-worthy-that-person-is.)
+    -   [In this chart, the denser the white counturs, the more delinquent lonas there are. Based on this observation, most of the delinqueunt loans are from people who have less than 200 days of EmploymentDuration. The strength of the emplyoment duration variable is even stronger than that of credit score. While people with high credit score still default on their loans, I notice almost no delinquencies for people with more than 200 days in their current job.](#in-this-chart-the-denser-the-white-counturs-the-more-delinquent-lonas-there-are.-based-on-this-observation-most-of-the-delinqueunt-loans-are-from-people-who-have-less-than-200-days-of-employmentduration.-the-strength-of-the-emplyoment-duration-variable-is-even-stronger-than-that-of-credit-score.-while-people-with-high-credit-score-still-default-on-their-loans-i-notice-almost-no-delinquencies-for-people-with-more-than-200-days-in-their-current-job.)
+-   [Where are the borrowers from?](#where-are-the-borrowers-from)
+    -   [Finishing off my exploration, I would like to see where Prosper Loan has the strongest customer base. This chart can be used to identify potential growth area within the US for new user acquistion. Currently, the majority of the Prosper loan customers are from California, followed by Texas, New York. The chart suggests a gap in membership in the mid-western states, with almost no-one in North Dakota! True, the population of North Dakota is pretty small, but more work can be done in states like Washington or Colorado where there are high population of technologicaly savy people.](#finishing-off-my-exploration-i-would-like-to-see-where-prosper-loan-has-the-strongest-customer-base.-this-chart-can-be-used-to-identify-potential-growth-area-within-the-us-for-new-user-acquistion.-currently-the-majority-of-the-prosper-loan-customers-are-from-california-followed-by-texas-new-york.-the-chart-suggests-a-gap-in-membership-in-the-mid-western-states-with-almost-no-one-in-north-dakota-true-the-population-of-north-dakota-is-pretty-small-but-more-work-can-be-done-in-states-like-washington-or-colorado-where-there-are-high-population-of-technologicaly-savy-people.)
+-   [Multivariate Analysis](#multivariate-analysis)
+    -   [Talk about some of the relationships you observed in this part of the](#talk-about-some-of-the-relationships-you-observed-in-this-part-of-the-1)
+    -   [Were there any interesting or surprising interactions between features?](#were-there-any-interesting-or-surprising-interactions-between-features)
+-   [Final Plots and Summary](#final-plots-and-summary)
+    -   [Plot One](#plot-one)
+    -   [Description One](#description-one)
+    -   [Plot Two](#plot-two)
+    -   [Description Two](#description-two)
+    -   [Plot Three](#plot-three)
+    -   [Description Three](#description-three)
+-   [Reflection](#reflection)
+    -   [This project was quite a beast! I began this project loathing R, thinking how much easier it would have been if I could performm the same visualization in Python. Many of the data wrangling tasks were in R were foreign to me, and I found myself struggling with th R syntax to slice and dice things right. Luckily, there is a wealth of resources avaialble online about R, and especially thanks to stackoverflow, rstudio, and the thousands of R bloggers, I am able to complete this project. As I progress through the project, I gain an appreciation on the agility of R in plotting some visually stunning plots, so much better than MS Excel!](#this-project-was-quite-a-beast-i-began-this-project-loathing-r-thinking-how-much-easier-it-would-have-been-if-i-could-performm-the-same-visualization-in-python.-many-of-the-data-wrangling-tasks-were-in-r-were-foreign-to-me-and-i-found-myself-struggling-with-th-r-syntax-to-slice-and-dice-things-right.-luckily-there-is-a-wealth-of-resources-avaialble-online-about-r-and-especially-thanks-to-stackoverflow-rstudio-and-the-thousands-of-r-bloggers-i-am-able-to-complete-this-project.-as-i-progress-through-the-project-i-gain-an-appreciation-on-the-agility-of-r-in-plotting-some-visually-stunning-plots-so-much-better-than-ms-excel)
+    -   [Besides struggling on learning R, I found myself putting my business hat on. This dataset is huge with 85 variables, and there are so many routes to explore, but only so few yielded meaningful analysis. The struggle began with asking the right questions. Without the right questions, the plots would just be meaningless display of one variable plotted against another. Other than thinking in a big picture way, I relied on Pearson's correlation matrix to help me visuzlize relationship between one variable and another, and plotting and one variables with another to find relationship that tells a story.](#besides-struggling-on-learning-r-i-found-myself-putting-my-business-hat-on.-this-dataset-is-huge-with-85-variables-and-there-are-so-many-routes-to-explore-but-only-so-few-yielded-meaningful-analysis.-the-struggle-began-with-asking-the-right-questions.-without-the-right-questions-the-plots-would-just-be-meaningless-display-of-one-variable-plotted-against-another.-other-than-thinking-in-a-big-picture-way-i-relied-on-pearsons-correlation-matrix-to-help-me-visuzlize-relationship-between-one-variable-and-another-and-plotting-and-one-variables-with-another-to-find-relationship-that-tells-a-story.)
+    -   [Based on this data exploration, I have found several variables of interest, EmploymentDuration, DebttoIncome, Listing Category, BorrowerRate, and credit score on the possiblity of default. For future work, I would like to conduct regression analysis on these variables on the possibility of default, and maybe come up with my own rating system in loan quality to help Prosper loan to better maximize their risk reward trade off. Through my detail analysis on Prosper loan's porfoiio, I belive the company is heading in the right path, with drastically lower default rate, increase subscriber growth, perhaps they have already developed their magic model in reducing default risk.](#based-on-this-data-exploration-i-have-found-several-variables-of-interest-employmentduration-debttoincome-listing-category-borrowerrate-and-credit-score-on-the-possiblity-of-default.-for-future-work-i-would-like-to-conduct-regression-analysis-on-these-variables-on-the-possibility-of-default-and-maybe-come-up-with-my-own-rating-system-in-loan-quality-to-help-prosper-loan-to-better-maximize-their-risk-reward-trade-off.-through-my-detail-analysis-on-prosper-loans-porfoiio-i-belive-the-company-is-heading-in-the-right-path-with-drastically-lower-default-rate-increase-subscriber-growth-perhaps-they-have-already-developed-their-magic-model-in-reducing-default-risk.)
+
 Explore Prosper Loan Porfolio by Hao Lee
 ========================================
 
@@ -104,45 +178,57 @@ Univariate Plots Section
 
 ##### To begin, I will split the CreationDate to "year", "date", "month" format for better processing later. Then, I noticed the "listingcategory..numeric" is listed by numbers, I will reassign them to their word categories.
 
-    #split creation date to: year, date, and month
-    loans<-separate(loans, ListingCreationDate, c("remove"), sep= " ")
+``` r
+#split creation date to: year, date, and month
+loans<-separate(loans, ListingCreationDate, c("remove"), sep= " ")
+```
 
     ## Warning: Too many values at 113937 locations: 1, 2, 3, 4, 5, 6, 7, 8, 9,
     ## 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...
 
-    loans<-separate(loans, remove, c("year", "month", "day"),sep = "-")
+``` r
+loans<-separate(loans, remove, c("year", "month", "day"),sep = "-")
 
-    #categorize the listing category from numeric to words
-    listing <- c("Not Available", "Debt Consolidation", "Home Imp", "Business", 
-                 "Personal", "Student", "Auto", "Other", "Baby", "Boat", "Cosmetic",
-                 "Engagement Ring", "Green", "Household Exp", "Large Purchases", 
-                 "Medical", "Motorcycle", "RV", "Taxes", "Vacation", "Wedding")
-    loans$listing_cat <- listing[c(loans$ListingCategory..numeric.+1)]
+#categorize the listing category from numeric to words
+listing <- c("Not Available", "Debt Consolidation", "Home Imp", "Business", 
+             "Personal", "Student", "Auto", "Other", "Baby", "Boat", "Cosmetic",
+             "Engagement Ring", "Green", "Household Exp", "Large Purchases", 
+             "Medical", "Motorcycle", "RV", "Taxes", "Vacation", "Wedding")
+loans$listing_cat <- listing[c(loans$ListingCategory..numeric.+1)]
+```
 
-    levels(loans$IncomeRange)
+``` r
+levels(loans$IncomeRange)
+```
 
     ## [1] "$0"             "$1-24,999"      "$100,000+"      "$25,000-49,999"
     ## [5] "$50,000-74,999" "$75,000-99,999" "Not displayed"  "Not employed"
 
 ##### The order on IncomeRange does not seem to be in order! I will reorder the levels.
 
-    loans$IncomeRange<- factor(loans$IncomeRange, 
-                               levels(loans$IncomeRange)[c(7,8,1,2,4,5,6,3)])
+``` r
+loans$IncomeRange<- factor(loans$IncomeRange, 
+                           levels(loans$IncomeRange)[c(7,8,1,2,4,5,6,3)])
+```
 
 ##### Now putting, the loanOriginationQuarter in chronological order for better graphing later
 
-    # Convert LoanOriginationQuarter to begin with the year using tidyr
-    # This also makes sure that any plot axis will put it in increasing order of year
-    loans$LoanOriginationQuarter <- as.character(loans$LoanOriginationQuarter)
-    loans <- loans %>%
-             separate (col = LoanOriginationQuarter,
-                       into = c("Quarters", "Year"), sep = " ") %>%
-             unite(col = LoanOriginationQuarter, Year, Quarters, sep = " ")
+``` r
+# Convert LoanOriginationQuarter to begin with the year using tidyr
+# This also makes sure that any plot axis will put it in increasing order of year
+loans$LoanOriginationQuarter <- as.character(loans$LoanOriginationQuarter)
+loans <- loans %>%
+         separate (col = LoanOriginationQuarter,
+                   into = c("Quarters", "Year"), sep = " ") %>%
+         unite(col = LoanOriginationQuarter, Year, Quarters, sep = " ")
 
-    loans$LoanOriginationQuarterF <- factor(loans$LoanOriginationQuarter)
+loans$LoanOriginationQuarterF <- factor(loans$LoanOriginationQuarter)
+```
 
-    #taking a look at loanStatus
-    summary(loans$LoanStatus)
+``` r
+#taking a look at loanStatus
+summary(loans$LoanStatus)
+```
 
     ##              Cancelled             Chargedoff              Completed 
     ##                      5                  11992                  38074 
@@ -155,10 +241,12 @@ Univariate Plots Section
 
 ##### Way to many factors. The variables can be better categorized to "current or Completed", "Past Due", "Defaulted", The 6 different levels of past due makes for unncessary details
 
-    loans$consol_status <- ifelse(loans$LoanStatus %like% "Past", "Past Due",
-                               ifelse(loans$LoanStatus == "Chargedoff", "Defaulted",
-                                      ifelse(loans$LoanStatus == "Defaulted", 
-                                             "Defaulted", "Current or Completed")))
+``` r
+loans$consol_status <- ifelse(loans$LoanStatus %like% "Past", "Past Due",
+                           ifelse(loans$LoanStatus == "Chargedoff", "Defaulted",
+                                  ifelse(loans$LoanStatus == "Defaulted", 
+                                         "Defaulted", "Current or Completed")))
+```
 
 ### Summary statistics:
 
@@ -429,7 +517,7 @@ Univariate Plots Section
 
 ### Explore the Prosper loan portfolio history
 
-<img src="loanexplorationproduction1graphmdfile_files/figure-markdown_strict/loan_listing-1.png" width="100%" height="18%" />
+<img src="loangitformat_files/figure-markdown_github/loan_listing-1.png" width="100%" height="18%" />
 
 ##### It appears the majority of the borrowers are taking the loan out for refinancing, which significantly dwarfes other category. The refiniancing category skews the other columns, so I transformed y-axis by log10
 
@@ -437,19 +525,19 @@ Univariate Plots Section
 
 ### Do borrowers pay back their commitments?
 
-<img src="loanexplorationproduction1graphmdfile_files/figure-markdown_strict/loan_status-1.png" width="100%" height="18%" />
+<img src="loangitformat_files/figure-markdown_github/loan_status-1.png" width="100%" height="18%" />
 
 ##### Segmented by loan terms, the percentage of defaulted and past due loans in the 36 month categories look alarmingly high. Since this graph includes data from 2006 to 2014, I suspect the majority of the bad loans are from prior to 2009. It is worth investigating whether Proper is being more cautious in approving loans.
 
 ### How much money is lended out?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/money_out-1.png)
+![](loangitformat_files/figure-markdown_github/money_out-1.png)
 
 ##### Most of the loans are below the 20,000 category, with the center of distirbution near the 5000 area. Because of the low borrowing amount, I will next investigate on the borrowing rate, and the credit-worthniess on the borrowers.
 
 ### Is it cheap to lend from my peers?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/uni_rate-1.png)![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/uni_rate-2.png)
+![](loangitformat_files/figure-markdown_github/uni_rate-1.png)![](loangitformat_files/figure-markdown_github/uni_rate-2.png)
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
     ##     9.5   669.5   689.5   695.1   729.5   889.5     591
@@ -458,19 +546,19 @@ Univariate Plots Section
 
 ### Length of Employment?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/employment_duration_A-1.png)
+![](loangitformat_files/figure-markdown_github/employment_duration_A-1.png)
 
 ##### This majority of the borrowers have less than 200 days of employment duration. With such high average credit score, I would have expected a higher mean for employment duration. Perhaps most of the borrowers are young and just joined the workforce.
 
 ### Is prosper loan growing their loan porfolio?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/prosper_years-1.png)
+![](loangitformat_files/figure-markdown_github/prosper_years-1.png)
 
 ##### Loans have grown exponentially since the financial crisis! It is interesting to note lending almost disappeared in 2009. It appears loans have fallen in 2014. Reason being, there is one quarter worth of data.
 
 ### But are they loaning out to credit-worth borrowers?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/loan_qc-1.png)
+![](loangitformat_files/figure-markdown_github/loan_qc-1.png)
 
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
     ##   1.000   3.000   4.000   4.072   5.000   7.000   29084
@@ -479,19 +567,19 @@ Univariate Plots Section
 
 ### How about loan loss?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/uni_loanloss-1.png)
+![](loangitformat_files/figure-markdown_github/uni_loanloss-1.png)
 
 ##### Time series chart confirm, that loan loss has fallen drastically since 2012. the peark from 2009 to 2012 is concerning. It appears, the management has reduced loan loss after 2012. We know it's not the case that membership is decreasing from previous plots.
 
 ### Looking at the customers
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/incomedist-1.png)
+![](loangitformat_files/figure-markdown_github/incomedist-1.png)
 
 ##### Most of the borrowers make around 25k to 50k, We do have 15% of population making 100K and up per year. A large portion of the borrowers have 0 reported income, or no information under this variable.
 
 ### Do they have the income to pay back?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/occupation-1.png)
+![](loangitformat_files/figure-markdown_github/occupation-1.png)
 
 ##### A look at averrage income range of the top 20 most common professions shows certain professions like computer programmer and executives are left skewed. Prosper may look into expanding customer acquisitons in attracting more customers in these professions.
 
@@ -525,11 +613,13 @@ Bivariate Plots Section
 
 ### Looking at 20 most common Prosper borrower professions
 
-    #Analyze demographic data
-    #let's look at credit score of twenty most common profession in Propser customer base
-    top_twenty_occ<- top_occup[c(1:20)]
-    loan_by_occ<- subset(loans, Occupation %in% top_twenty_occ)
-    table(top_twenty_occ)
+``` r
+#Analyze demographic data
+#let's look at credit score of twenty most common profession in Propser customer base
+top_twenty_occ<- top_occup[c(1:20)]
+loan_by_occ<- subset(loans, Occupation %in% top_twenty_occ)
+table(top_twenty_occ)
+```
 
     ## top_twenty_occ
     ##                                                      Accountant/CPA 
@@ -553,35 +643,37 @@ Bivariate Plots Section
     ##                           Teacher                      Truck Driver 
     ##                                 1                                 1
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_top20-1.png)
+![](loangitformat_files/figure-markdown_github/b_top20-1.png)
 
 ##### The profession that have the riskiest credit score is listed as blank. The profession that has the longest tail in credit average is "othr". Prosper lending should be more cautious when borrowers do not specify their profession. Most professions appear to have credit average around 690. This means Prosper is selective in approving its borrowers.
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/debtIncOccu-1.png)
+![](loangitformat_files/figure-markdown_github/debtIncOccu-1.png)
 
 ##### The debt to income graph paints a better story in quantifying credit risk. Borroweers with profession listed as "othr, and blank, have the longest tail in Debt to income ratio. Other professions with high debt-to-income tailis are clerks, and teachers. A high D/I ratio may means difficiulty in making loan commitments. .
 
 ### Employment status on credit scores
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_employmentstat-1.png)
+![](loangitformat_files/figure-markdown_github/b_employmentstat-1.png)
 
 ##### If credit\_average is a good measasure on loan quality, people with employment status listed as blank or NA have much lower than average credit scores. SUrprisingly people who are not employed have slightly higher than average credit scores than Part time workers
 
 ### Does higher income translate to higher credit score?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_income_onCred-1.png)
+![](loangitformat_files/figure-markdown_github/b_income_onCred-1.png)
 
 ##### The distribution does tend to move right as yearly income goes up! Though for people in 75k+ category, the distribution is tighter, the center of distribution for all the classes expect for "Not display" tends to hover around 680~
 
 ### Can working longer lower your borrowing rate?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_lengthemp-1.png)
+![](loangitformat_files/figure-markdown_github/b_lengthemp-1.png)
 
 ##### The most striking change in borrowing rate happens when people have length of emplyoment more than 360 days. The borrwing rate becomes the tighest, and the tails are the shortest, suggesting people who stay at one job longer can expect more certain borrowing rate at a low rate.
 
 ##### Looking at the summary statistic below, the 630+ employmentdays class have the lowest standard deviation, IQR range, and the lowest Max as well. This confirm my earlier observation.
 
-    tapply(loans$BorrowerRate, loans$EmploymentStatusDuration.bucket, describe)
+``` r
+tapply(loans$BorrowerRate, loans$EmploymentStatusDuration.bucket, describe)
+```
 
     ## $`(90,180]`
     ##    vars     n mean   sd median trimmed  mad min  max range skew kurtosis
@@ -623,13 +715,15 @@ Bivariate Plots Section
 
 ### What about the lenders, what makes money for them??
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_lendermoney-1.png)![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/b_lendermoney-2.png)
+![](loangitformat_files/figure-markdown_github/b_lendermoney-1.png)![](loangitformat_files/figure-markdown_github/b_lendermoney-2.png)
 
 ##### The boowerRate graph vs estimated return graph has some very distinct stripe, will investigate this more in the multivariate section!
 
 ##### With HR having a rating of 1, the correlation test tells that the riskier the loan the higher the lender yield. The stripes on the earlier graph suggest this may not be the only side of the story.
 
-    cor.test(loans$ProsperRating..numeric., loans$LenderYield)
+``` r
+cor.test(loans$ProsperRating..numeric., loans$LenderYield)
+```
 
     ## 
     ##  Pearson's product-moment correlation
@@ -643,17 +737,19 @@ Bivariate Plots Section
     ##        cor 
     ## -0.9531194
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/lender_adding_color-1.png)
+![](loangitformat_files/figure-markdown_github/lender_adding_color-1.png)
 
 ##### Taking the previous graph and coloring by the prosper loan rating, we get a better sense on the riskieness of loans. Given a borrowing rate, the lower the rating, the lower the expected return on the loan. The graph is a bit counter-intuitive, as I would expect a much higher yield, or estimated return for riskier loans.
 
 ### How is Prosper Loan performing as a company?
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/default_freq_b-1.png)
+![](loangitformat_files/figure-markdown_github/default_freq_b-1.png)
 
 ##### Default rate has gone down from a high of 40% to below 1%. Well done Propser. The loan default rate is unbelivably high prior to 2011. Why?
 
-    table(loans$year)
+``` r
+table(loans$year)
+```
 
     ## 
     ##  2005  2006  2007  2008  2009  2010  2011  2012  2013  2014 
@@ -664,11 +760,11 @@ Bivariate Plots Section
 What is the default risk for each grade of loan?
 ================================================
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/loan_status%20r-1.png)
+![](loangitformat_files/figure-markdown_github/loan_status%20r-1.png)
 
 ##### Looking at the plot, D, E, and HR grade loans have much higher chance of defaults. Tying this picture back tot the yield rate, Prosper loan faces relatively low risk with grade C and B loans, and can make much higher yield than the higher grade loans.
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/number_investorsr-1.png)
+![](loangitformat_files/figure-markdown_github/number_investorsr-1.png)
 
 ##### Investors getting hyped about Propser Loans, with steady growth after the financial crisis.Recently, Prosper has ecountered a setback in investor growth. Zooming back, Propser is doing well in growing its membership base.
 
@@ -688,28 +784,25 @@ Bivariate Analysis
 Multivariate Plots Section
 ==========================
 
-> **Tip**: Now it's time to put everything together. Based on what you
-> found in the bivariate plots section, create a few multivariate plots
-> to investigate more complex interactions between variables. Make sure
-> that the plots that you create here are justified by the plots you
-> explored in the previous section. If you plan on creating any
-> mathematical models, this is the section where you will do that.
+> **Tip**: Now it's time to put everything together. Based on what you found in the bivariate plots section, create a few multivariate plots to investigate more complex interactions between variables. Make sure that the plots that you create here are justified by the plots you explored in the previous section. If you plan on creating any mathematical models, this is the section where you will do that.
 
 Which loan cateogry has the highest risk?
 =========================================
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/heap_map-1.png)
+![](loangitformat_files/figure-markdown_github/heap_map-1.png)
 
 ##### In the previous section, we examined the relationship between occupation, and credit risk. This heat map looks at the loan default risk against different listing category. From the gradient of the map, we can see that for all listing categories, the loans with the lowest credit rating have the highest loan loss rate. Certain categories havev much higher loan loss rate than others, these information can be used to mitigate risk in loan selection.
 
 Are higher grade loans necessarily safer?
 =========================================
 
-<img src="loanexplorationproduction1graphmdfile_files/figure-markdown_strict/borrowrate_loanloss-1.png" width="100%" height="18%" />
+<img src="loangitformat_files/figure-markdown_github/borrowrate_loanloss-1.png" width="100%" height="18%" />
 
 ##### I would have expected that higher grade loans would have lower principal losses, but the graph suggested otherwise. Looking at the graph, almost all the principal loss of over 15K are from the high grade loans. This chart suggests there are certainly more varaibles that determine the risk of default than the Rating of the loans. Loans with lower rating also have surprisingly smaller gross principal loss. One possible explation is less money was extended out to the lower grade loans.
 
-    cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+``` r
+cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+```
 
     ## 
     ##  Pearson's product-moment correlation
@@ -728,25 +821,27 @@ Are higher grade loans necessarily safer?
 Riskiness by the duration of the loan?
 ======================================
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/debt_income-1.png)
+![](loangitformat_files/figure-markdown_github/debt_income-1.png)
 
 ##### The most striking feature of this chart is that loans of 12 month duration have very few defaults and delinquencies. Loans that have the highest defaults are the 36 month duration ones. In the 36 month graph, the riskiness of debt to income and possiblity of default is clearer, with far more green points moving past 1.25 debt to income line.
 
 The longer one stay in a job, the more credit worthy that person is.
 ====================================================================
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/job_security-1.png)
+![](loangitformat_files/figure-markdown_github/job_security-1.png)
 
 ##### In this chart, the denser the white counturs, the more delinquent lonas there are. Based on this observation, most of the delinqueunt loans are from people who have less than 200 days of EmploymentDuration. The strength of the emplyoment duration variable is even stronger than that of credit score. While people with high credit score still default on their loans, I notice almost no delinquencies for people with more than 200 days in their current job.
 
 Where are the borrowers from?
 =============================
 
-<img src="loanexplorationproduction1graphmdfile_files/figure-markdown_strict/states-1.png" width="100%" height="100%" />
+<img src="loangitformat_files/figure-markdown_github/states-1.png" width="100%" height="100%" />
 
 ##### Finishing off my exploration, I would like to see where Prosper Loan has the strongest customer base. This chart can be used to identify potential growth area within the US for new user acquistion. Currently, the majority of the Prosper loan customers are from California, followed by Texas, New York. The chart suggests a gap in membership in the mid-western states, with almost no-one in North Dakota! True, the population of North Dakota is pretty small, but more work can be done in states like Washington or Colorado where there are high population of technologicaly savy people.
 
-    sort(table(loans$BorrowerState), decreasing = TRUE)
+``` r
+sort(table(loans$BorrowerState), decreasing = TRUE)
+```
 
     ## 
     ##    CA    TX    NY    FL    IL          GA    OH    MI    VA    NJ    NC 
@@ -778,7 +873,7 @@ Final Plots and Summary
 
 ### Plot One
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/Plot_one-1.png)
+![](loangitformat_files/figure-markdown_github/Plot_one-1.png)
 
 ### Description One
 
@@ -788,13 +883,15 @@ Final Plots and Summary
 
 ### Plot Two
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/Plot_Two-1.png)
+![](loangitformat_files/figure-markdown_github/Plot_Two-1.png)
 
 ### Description Two
 
 ##### This graph suggests there are more variables that predict the probability of default than Borrower Rate, and credit rating. Surprisingly, for the loans that have defaulted, the higher the prosper rating, the more principal lost. Pearson's correlation test on loans defaulted, and loan quality rating suggests if the loan were to default, the higher the rating, the higher the expected loss.
 
-    cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+``` r
+cor.test(loan_defaults$ProsperRating..numeric., loan_defaults$LP_GrossPrincipalLoss)
+```
 
     ## 
     ##  Pearson's product-moment correlation
@@ -812,15 +909,17 @@ Final Plots and Summary
 
 ### Plot Three
 
-![](loanexplorationproduction1graphmdfile_files/figure-markdown_strict/Plot_three-1.png)
+![](loangitformat_files/figure-markdown_github/Plot_three-1.png)
 
 ### Description Three
 
 ##### One would have guessed that credit score is the best predictor in default risk. This third plot suggests otherwise. At less than 50 days of employment for the loans that have been defaulted, a person with 730 credit score could just as easily default on her loan as someone with 650 credit score. The density contours remains the most dense at the low employment duration interval, and spreads out as the the employment duration increases. At 360 days, we see almost no delinquent loans. This chart suggests taht employment duration can be one of the strongest predictor in default risk, with the risk goes down as employment days goes up.
 
-    loan_good <- subset(loans, loans$consol_agg == "Current or Completed")
-    t.test(loan_good$EmploymentStatusDuration, 
-           loan_defaults$EmploymentStatusDuration, var.equal = TRUE, paired = FALSE)
+``` r
+loan_good <- subset(loans, loans$consol_agg == "Current or Completed")
+t.test(loan_good$EmploymentStatusDuration, 
+       loan_defaults$EmploymentStatusDuration, var.equal = TRUE, paired = FALSE)
+```
 
     ## 
     ##  Two Sample t-test
